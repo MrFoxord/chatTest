@@ -4,6 +4,7 @@ import {css, styled } from '@mui/system';
 import Stack from '@mui/material/Stack';
 import List from '@mui/material/List';
 import TextField from '@mui/material/TextField';
+import ListItemText from '@mui/material/ListItemText';
 
 export const ChatContainer = styled (Stack)`
     padding: 20px;
@@ -26,4 +27,8 @@ export const MessageList = styled(List)`
 
 export const StyledField = styled(TextField)`
     margin-bottom: 10px;
+`;
+
+export const StyledChatText = styled(ListItemText)`
+    color: purple;
 `;
