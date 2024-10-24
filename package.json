@@ -1,14 +1,15 @@
 {
   "name": "chat-test",
   "version": "0.1.0",
-  "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "dockerdev": "docker-compose -f docker-compose.dev.yml up",
-    "dockerprod": "docker-compose -f docker-compose.prod.yml up --build"
+    "dockerdev": "docker-compose -f docker-compose.dev.yml up -d",
+    "dockerprod": "docker-compose -f docker-compose.prod.yml up --build",
+    "serverstart": "node --loader ts-node/esm src/server/server.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.13.3",
@@ -17,6 +18,7 @@
     "@types/styled-components": "^5.1.34",
     "isomorphic-ws": "^5.0.0",
     "mongodb": "^6.10.0",
+    "mongoose": "^8.7.2",
     "next": "15.0.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -24,11 +26,21 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
-    "@types/node": "^20",
+    "@types/mongoose": "^5.11.97",
+    "@types/node": "^20.17.0",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@types/ws": "^8.5.12",
     "eslint": "^8",
     "eslint-config-next": "15.0.1",
-    "typescript": "^5"
-  }
+    "nodemon": "^3.1.7",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.6.3"
+  },
+  "description": "This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
