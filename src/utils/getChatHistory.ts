@@ -12,6 +12,9 @@ export const getChatHistory = async (chatName: string) => {
         return lastMessages.map(msg => ({
             content: msg.content,
             chatName: msg.chat,
+            audioData: msg.audioData,
+            createdAt: msg.createdAt,
+            clientId: msg.clientId,
         }));
     } catch (error) {
         console.error('Error fetching messages:', error);

@@ -3,6 +3,7 @@
         "dockerdev",
         "dockerprod",
         "Serv",
-        "serverstart"
+        "serverstart",
+        "uuidv"
     ]
 }

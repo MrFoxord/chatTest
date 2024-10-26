@@ -8,7 +8,7 @@ import ListItemText from '@mui/material/ListItemText';
 
 export const ChatContainer = styled (Stack)`
     padding: 20px;
-    background-color: #f0f0f0;
+    background-color: grey;
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     max-width: 400px;
@@ -31,4 +31,14 @@ export const StyledField = styled(TextField)`
 
 export const StyledChatText = styled(ListItemText)`
     color: purple;
+`;
+
+export const AudioMessage = styled(Stack)`
+    display: flex;
+    align-items: center;
+    margin: 8px 0;
+    
+    audio {
+        margin-right: 8px;
+    }
 `;

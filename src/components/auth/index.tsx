@@ -3,28 +3,33 @@
 import React, { useEffect, useState } from 'react';
 import { AuthContainer, StyledInput, StyledButton, ErrorText } from './styles';
 
-const Auth: React.FC<{ ws: WebSocket | null; onLogin: () => void }> = ({ ws, onLogin }) => {
+const Auth: React.FC<{ ws: WebSocket | null; onLogin: (clientId: string) => void }> = ({ ws, onLogin }) => {
     const [userName, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false); // Для индикатора загрузки
 
     useEffect(() => {
         if (ws) {
             ws.onmessage = (event) => {
                 const message = JSON.parse(event.data);
                 if (message.type === 'login' && message.status === 'ok') {
-                    onLogin();
+                    onLogin(message.clientId); // Вызов onLogin с clientId
+                    setLoading(false); // Сброс загрузки
                 } else if (message.type === 'register' && message.status === 'ok') {
-                    onLogin();
+                    onLogin(message.clientId); // Вызов onLogin с clientId
+                    setLoading(false); // Сброс загрузки
                 } else if (message.status === 'error') {
                     setError(message.error);
+                    setLoading(false); // Сброс загрузки
                 }
             };
         }
     }, [ws, onLogin]);
 
     const handleLogin = () => {
+        setLoading(true); // Установка состояния загрузки
         if (ws?.readyState === WebSocket.OPEN) {
             const message = JSON.stringify({
                 type: 'login',
@@ -34,10 +39,12 @@ const Auth: React.FC<{ ws: WebSocket | null; onLogin: () => void }> = ({ ws, onL
             ws.send(message);
         } else {
             setError('WebSocket connection not established');
+            setLoading(false); // Сброс загрузки
         }
     };
 
     const handleRegister = () => {
+        setLoading(true); // Установка состояния загрузки
         if (ws?.readyState === WebSocket.OPEN) {
             const message = JSON.stringify({
                 type: 'register',
@@ -48,6 +55,7 @@ const Auth: React.FC<{ ws: WebSocket | null; onLogin: () => void }> = ({ ws, onL
             ws.send(message);
         } else {
             setError('WebSocket connection not established');
+            setLoading(false); // Сброс загрузки
         }
     };
 
@@ -71,8 +79,12 @@ const Auth: React.FC<{ ws: WebSocket | null; onLogin: () => void }> = ({ ws, onL
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
             />
-            <StyledButton onClick={handleLogin}>Login</StyledButton>
-            <StyledButton onClick={handleRegister}>Register</StyledButton>
+            <StyledButton onClick={handleLogin} disabled={loading}>
+                {loading ? 'Logging in...' : 'Login'}
+            </StyledButton>
+            <StyledButton onClick={handleRegister} disabled={loading}>
+                {loading ? 'Registering...' : 'Register'}
+            </StyledButton>
         </AuthContainer>
     );
 };
