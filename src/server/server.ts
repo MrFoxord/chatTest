@@ -1,32 +1,18 @@
-import { WebSocketServer } from 'ws';
+import { WebSocketServer,type WebSocket as WServ } from 'ws';
 import mongoose from 'mongoose';
-import Message from '../models/message.ts'; // Импортируйте модели
-import Client from '../models/clients';
-import GroupChat from '../models/groupChats.ts';
+import { 
+    handleChatMessage,
+    getChatHistory,
+    handleDisconnect,
+    handleLogin,
+    handleRegister,
+    createCollectionIfNotExists,  
+} from '../utils/index.ts';
 import dotenv from 'dotenv';
+import Message from '../models/message.ts';
 
 interface MessagePayload {
     content: string;
-}
-// utils
-const createCollectionIfNotExists = async(collectionNames: string[]) =>{
-    const db = mongoose.connection.db;
-    if(db){
-        const collections = await db.listCollections().toArray();
-        const existingCollections = collections.map((col) => col.name);
-    
-        for (const collectionName of collectionNames) {
-            if(!existingCollections.includes(collectionName)) {
-                console.log(`Creating collection ${collectionName}`);
-                await mongoose.connection.db?.createCollection(collectionName);
-            } else {
-                console.log(`Collection ${collectionName} already exists`);
-            }
-        }
-    } else {
-        console.error('MongoDB connection is not established or db is undefined.');
-    }
-    
 }
 
 dotenv.config();
@@ -47,8 +33,10 @@ mongoose.connect(mongoURI, {})
 
 const wss = new WebSocketServer({ port: 8080 });
 
-wss.on('connection', async (ws) => {
+wss.on('connection', async (ws: WServ) => {
     console.log('New client connected');
+    ws.send(JSON.stringify({ type: 'connection', message: 'Connection established' }));
+
     ws.on('message', async (message: string) => {
         console.log(`Received: ${message}`);
         
@@ -62,44 +50,35 @@ wss.on('connection', async (ws) => {
         }
 
         const { type, content, chatName} = parsedMessage;
-
+        console.log('type of message', type);
         switch(type) {
             case 'chat-message':
-                const newMessage = new Message({
-                    content,
-                    chat: chatName,
-                });
-
-                try {
-                    await newMessage.save();
-                    wss.clients.forEach(client=>{
-                        if(client.readyState === 1) {
-                            client.send(JSON.stringify({ type: 'chat-message', content, chatName}));
-                        }
-                    })
-                } catch(e) {
-                    console.log('Error saving message', e);
-                }
+                console.log('=============== new message', parsedMessage);
+                await handleChatMessage(content, chatName, wss);
                 break;
 
             case 'disconnect':
-                console.log('Client disconnected');
+                await handleDisconnect(ws);
                 break;
-
+            case 'register':
+                await handleRegister(parsedMessage, ws);
+                break;
+            case 'login':
+                await handleLogin(parsedMessage, ws);
+                break;
+            case 'history':
+                const chatHistory = await getChatHistory(parsedMessage.chat);
+                ws.send(JSON.stringify({
+                    type: 'history',
+                    messages: chatHistory,
+                }));
+                break;
             default:
                 console.log('Unknown type of message', type);
                 console.log('full message is', parsedMessage);
+            break;
         }
     });
-    
-    try {
-        const lastMessages = await Message.find().sort({ createdAt: -1 }).limit(20).exec();
-        lastMessages.reverse(); 
-        ws.send(JSON.stringify({ type: 'history', messages: lastMessages.map(msg => ({ content: msg.content, chatName: msg.chat })) }));
-    } catch (error) {
-        console.error('Error fetching messages:', error);
-    }
-
     
 });
 
