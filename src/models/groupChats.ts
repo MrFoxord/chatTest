@@ -1,14 +1,14 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-interface IGroupChat extends Document {
+export interface IGroupChats extends Document {
   name: string;
   clients: mongoose.Types.ObjectId[];
 }
 
-const groupChatSchema = new Schema<IGroupChat>({
-    name: { type: String, required: true },
-    clients: [{ type: mongoose.Types.ObjectId, ref: 'Client' }],
-  });
+const groupChatSchema = new Schema<IGroupChats>({
+  name: { type: String, required: true },
+  clients: [{ type: mongoose.Types.ObjectId, ref: 'clients' }], // Поменяйте на members, если хотите использовать это имя
+});
 
-const GroupChat = mongoose.model<IGroupChat>('GroupChat', groupChatSchema);
-export default GroupChat;
+const GroupChats = mongoose.model<IGroupChats>('groupChats', groupChatSchema);
+export default GroupChats;

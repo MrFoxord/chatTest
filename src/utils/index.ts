@@ -5,3 +5,7 @@ export { handleDisconnect} from './handleDisconnect.ts';
 export { createCollectionIfNotExists } from './dbUtils.ts';
 export { getChatHistory } from './getChatHistory.ts';
 export { handleAudioMessage } from './audioHandler.ts';
+export { addMemberToGroupChat } from './addToGroupChat.ts';
+export { createGroupChat } from './createGroupChat.ts';
+export { getUserGroupChats } from './getUserGroupChats.ts';
+export { getGroupChatMessages } from './getGroupChatMessages.ts';

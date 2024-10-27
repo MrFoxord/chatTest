@@ -7,7 +7,11 @@ import {
     handleLogin,
     handleRegister,
     handleAudioMessage,
-    createCollectionIfNotExists,  
+    createCollectionIfNotExists,
+    getUserGroupChats,
+    addMemberToGroupChat,
+    createGroupChat,
+    getGroupChatMessages,  
 } from '../utils/index.ts';
 import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
@@ -20,6 +24,7 @@ interface MessagePayload {
     audioData?: string;
     duration?: number;
     sessionId?: string;
+    newMemberId?: mongoose.Types.ObjectId;
 }
 
 dotenv.config();
@@ -44,6 +49,8 @@ wss.on('connection', async (ws: WServ) => {
     const clientId = new mongoose.Types.ObjectId();
     const sessionId = uuidv4();
     clients.set(ws, { clientId, sessionId });
+    const userGroupChats = await getUserGroupChats(clientId);
+    ws.send(JSON.stringify({ type: 'user-group-chats', chats: userGroupChats }));
     
     ws.send(JSON.stringify({ type: 'sessionId', sessionId }));
     ws.send(JSON.stringify({ type: 'connection', message: 'Connection established' }));
@@ -57,15 +64,29 @@ wss.on('connection', async (ws: WServ) => {
             console.log('Invalid message format');
             return;
         }
-
         const { type, content, chatName, audioData } = parsedMessage;
         const client = clients.get(ws);
+        let id;
         switch(type) {
+            case 'create-group-chat':
+                console.log('proc create chat');
+                if(client){
+                    await createGroupChat(parsedMessage.chatName, new mongoose.Types.ObjectId(parsedMessage.clientId));
+                }
+                break;
+            case 'add-member-to-group':
+                if(parsedMessage.newMemberId){
+                    await addMemberToGroupChat(parsedMessage.chatName, parsedMessage.newMemberId);
+                }
+                break;
             case 'chat-message':
-                if(client?.clientId.toString() !== parsedMessage.clientId || client.sessionId !== parsedMessage.sessionId) {
+                //@ts-ignore
+                if(client && client.sessionId.toString() !== parsedMessage.sessionId.toString()) {
+                    console.log('proc failed');
                     ws.send(JSON.stringify({ type: 'status', status: 'error', content, chatName, clientId: parsedMessage.clientId }));
                 } else if (content && chatName) {
                     try {
+                        console.log('start saving message');
                         await handleChatMessage(content, chatName, clients, ws);
                         ws.send(JSON.stringify({ type: 'status', status: 'sent', content, chatName, clientId: parsedMessage.clientId }));
                     } catch (error) {
@@ -76,8 +97,19 @@ wss.on('connection', async (ws: WServ) => {
                     console.log('Chat message missing content or chatName');
                 }
                 break;
+            case 'get-group-chat-messages':
+                if(client){
+                    const messages = await getGroupChatMessages(client.clientId.toString());
+                    ws.send(JSON.stringify({
+                    type: 'group-chat-messages',
+                    chatName,
+                    messages,
+                }));
+                 }
+                break;
             case 'audio-message':
-                if(client?.clientId.toString() !== parsedMessage.clientId || client.sessionId !== parsedMessage.sessionId) {
+                console.log('proc voice');
+                if(client && client.sessionId !== parsedMessage.sessionId) {
                     ws.send(JSON.stringify({ type: 'status', status: 'error', content, chatName, clientId: parsedMessage.clientId }));
                 } else if (audioData && chatName) {
                     console.log('proc audio message');
@@ -99,19 +131,29 @@ wss.on('connection', async (ws: WServ) => {
                 await handleRegister(parsedMessage, ws);
                 break;
             case 'login':
-                await handleLogin(parsedMessage, ws);
+                id = await handleLogin(parsedMessage, ws);
+                console.log('id is srver is', id);
                 break;
             case 'history':
-                const chatHistory = await getChatHistory(parsedMessage.chatName);
-                ws.send(JSON.stringify({
-                    type: 'history',
-                    messages: chatHistory,
-                }));
-                break;
-            default:
-                console.log('Unknown type of message:', type);
-                console.log('Full message:', parsedMessage);
-                break;
+            if (client) {
+                console.log('here', parsedMessage.clientId);
+                console.log('and here', new mongoose.Types.ObjectId(parsedMessage.clientId));
+                if (typeof parsedMessage.clientId === 'string' && mongoose.Types.ObjectId.isValid(parsedMessage.clientId)) {
+                    const chatHistory = await getChatHistory(new mongoose.Types.ObjectId(parsedMessage.clientId));
+                    ws.send(JSON.stringify({
+                        type: 'history',
+                        messages: chatHistory,
+                    }));
+                } else {
+                    console.error('Invalid clientId:', parsedMessage.clientId);
+                }
+            }
+            break;
+
+        default:
+            console.log('Unknown type of message:', type);
+            console.log('Full message:', parsedMessage);
+            break;
         }
     });
     wss.on('close', () => {
