@@ -1,5 +1,6 @@
 import { WebSocketServer, type WebSocket as WServ } from 'ws';
-import mongoose, {ObjectId} from 'mongoose';
+import mongoose from 'mongoose';
+import GroupChats from '../models/groupChats.ts';
 import { 
     handleChatMessage,
     getChatHistory,
@@ -24,9 +25,9 @@ interface MessagePayload {
     audioData?: string;
     duration?: number;
     sessionId?: string;
-    newMemberId?: mongoose.Types.ObjectId;
+    newMemberName?: mongoose.Types.ObjectId;
 }
-
+// to connect .env in project's core 
 dotenv.config();
 
 const mongoURI = process.env.NEXT_PUBLIC_MONGODB_URI || 'mongodb://localhost:27017/chatDatabase';
@@ -43,18 +44,25 @@ mongoose.connect(mongoURI, {})
 const wss = new WebSocketServer({ port: 8080 });
 const clients: Map<WServ, { clientId: mongoose.Types.ObjectId; sessionId: string }> = new Map();
 
+
+
+async function getGroupChatByName(chatName: string) {
+    return await GroupChats.findOne({ name: chatName });
+}
+
 wss.on('connection', async (ws: WServ) => {
     console.log('New client connected');
-
+    //initial state of server WS
     const clientId = new mongoose.Types.ObjectId();
     const sessionId = uuidv4();
     clients.set(ws, { clientId, sessionId });
+    
     const userGroupChats = await getUserGroupChats(clientId);
     ws.send(JSON.stringify({ type: 'user-group-chats', chats: userGroupChats }));
     
     ws.send(JSON.stringify({ type: 'sessionId', sessionId }));
     ws.send(JSON.stringify({ type: 'connection', message: 'Connection established' }));
-
+// listeners
     ws.on('message', async (message: string) => {
         let parsedMessage: MessagePayload;
 
@@ -74,11 +82,71 @@ wss.on('connection', async (ws: WServ) => {
                     await createGroupChat(parsedMessage.chatName, new mongoose.Types.ObjectId(parsedMessage.clientId));
                 }
                 break;
-            case 'add-member-to-group':
-                if(parsedMessage.newMemberId){
-                    await addMemberToGroupChat(parsedMessage.chatName, parsedMessage.newMemberId);
-                }
-                break;
+                case 'add-member-to-group':
+                    if (parsedMessage.newMemberName && parsedMessage.chatName) {
+                        const groupChat = await getGroupChatByName(parsedMessage.chatName);
+                        
+                        if (groupChat) {
+                            const isMember = groupChat.clients.includes(parsedMessage.newMemberName);
+                            if (!isMember) {
+                                try {
+                                    await addMemberToGroupChat(parsedMessage.chatName, parsedMessage.newMemberName.toString());
+                
+                                    const updatedGroupChat = await getGroupChatByName(parsedMessage.chatName);
+                
+                                    if (updatedGroupChat) {
+                                        ws.send(JSON.stringify({
+                                            type: 'status',
+                                            status: 'success',
+                                            message: `Member ${parsedMessage.newMemberName} added to ${parsedMessage.chatName}`,
+                                        }));
+                
+                                        wss.clients.forEach(client => {
+                                            if (client.readyState === WebSocket.OPEN) {
+                                                client.send(JSON.stringify({
+                                                    type: 'update-group-chat',
+                                                    chatName: parsedMessage.chatName,
+                                                    clients: updatedGroupChat.clients,
+                                                }));
+                                            }
+                                        });
+                                    } else {
+                                        ws.send(JSON.stringify({
+                                            type: 'status',
+                                            status: 'error',
+                                            message: `Group chat ${parsedMessage.chatName} does not exist after adding member.`,
+                                        }));
+                                    }
+                                } catch (error) {
+                                    console.error('Error adding member to group:', error);
+                                    ws.send(JSON.stringify({
+                                        type: 'status',
+                                        status: 'error',
+                                        message: 'Failed to add member to group.',
+                                    }));
+                                }
+                            } else {
+                                ws.send(JSON.stringify({
+                                    type: 'status',
+                                    status: 'error',
+                                    message: `Member ${parsedMessage.newMemberName} is already in the group.`,
+                                }));
+                            }
+                        } else {
+                            ws.send(JSON.stringify({
+                                type: 'status',
+                                status: 'error',
+                                message: `Group chat ${parsedMessage.chatName} does not exist.`,
+                            }));
+                        }
+                    } else {
+                        ws.send(JSON.stringify({
+                            type: 'status',
+                            status: 'error',
+                            message: 'Missing newMemberId or chatName.',
+                        }));
+                    }
+                    break;
             case 'chat-message':
                 //@ts-ignore
                 if(client && client.sessionId.toString() !== parsedMessage.sessionId.toString()) {
@@ -130,15 +198,20 @@ wss.on('connection', async (ws: WServ) => {
             case 'register':
                 await handleRegister(parsedMessage, ws);
                 break;
+            case 'opening': 
+                ws.send(JSON.stringify({ type: 'hello-connecting', clientId: clientId.toString() }));
+                break;    
             case 'login':
                 id = await handleLogin(parsedMessage, ws);
                 console.log('id is srver is', id);
                 break;
             case 'history':
+                console.log('proc before history ========================')
             if (client) {
                 console.log('here', parsedMessage.clientId);
                 console.log('and here', new mongoose.Types.ObjectId(parsedMessage.clientId));
                 if (typeof parsedMessage.clientId === 'string' && mongoose.Types.ObjectId.isValid(parsedMessage.clientId)) {
+                    console.log('=====proc done');
                     const chatHistory = await getChatHistory(new mongoose.Types.ObjectId(parsedMessage.clientId));
                     ws.send(JSON.stringify({
                         type: 'history',
@@ -156,8 +229,14 @@ wss.on('connection', async (ws: WServ) => {
             break;
         }
     });
+// blank for message of disconnect
     wss.on('close', () => {
         console.log('Client disconnected');
+        wss.clients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({ type: 'goodbye-disconnecting', clientId: clientId.toString() }));
+            }
+        });
         clients.delete(ws);
     });
 });

@@ -15,6 +15,6 @@ export const createGroupChat = async (chatName: string, creatorId: mongoose.Type
         return savedGroupChat;
     } catch (error) {
         console.error('Error saving group chat:', error);
-        throw error; // можно выбросить ошибку, чтобы обработать её на более высоком уровне
+        throw error;
     }
 };

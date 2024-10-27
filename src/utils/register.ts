@@ -26,7 +26,7 @@ export const handleRegister = async (data: any, ws: WServ) => {
                 content: msg.content,
                 chatName: msg.chat,
                 audioData: msg.audioData,
-                clientId: msg.clientId // Добавлено clientId в сообщения
+                clientId: msg.clientId 
             }))
         }));
     } catch (error) {

@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import Message from '../models/message.ts';
-import GroupChats from '../models/groupChats.ts'; // Импортируйте модель GroupChat
+import GroupChats from '../models/groupChats.ts'; 
 import { type WebSocket as WServ } from 'ws';
 
 export const getGroupChatMessages = async (clientId: string) => {
@@ -15,7 +15,7 @@ export const getGroupChatMessages = async (clientId: string) => {
                     .exec();
                 return {
                     chatName: chat.name,
-                    messages: messages.reverse(), // Реверсируем для правильного порядка
+                    messages: messages.reverse(), 
                 };
             })
         );

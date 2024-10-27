@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Auth from '@/components/auth';
 import Chat from '@/components/chat';
-
+// url of ws
 const socketUrl = 'ws://localhost:8080';
 
 const App: React.FC = () => {
@@ -19,8 +19,6 @@ const App: React.FC = () => {
         socket.onopen = () => {
             console.log('WebSocket connection established');
         };
-        // @ts-ignore
-         
 
         socket.onclose = () => {
             console.log('WebSocket connection closed');
@@ -31,28 +29,23 @@ const App: React.FC = () => {
             socket.close();
         };
     }, []);
-
-    useEffect(()=>{
-        console.log('pros paa ws');
-        if(ws) {ws.onmessage = (event) => {
-            console.log('proc app message')
-            const messageData = typeof event.data === 'string' ? event.data : '';
-            const parsedMessage = JSON.parse(messageData);
-
-            try {
-                console.log('we have message', parsedMessage);
-                if (parsedMessage.type === 'sessionId') {
-                        setSessionId(parsedMessage.sessionId);
-                }
-            } catch (e) {
-                console.log('Error parsing message', e);
-            }
-        };}
-    },[ws]);
-
+// main control os websocket (for auth and chat)
     useEffect(() => {
-        console.log('app sessionId is', sessionId);
-    }, [sessionId]);
+        if (ws) {
+            ws.onmessage = (event) => {
+                const messageData = typeof event.data === 'string' ? event.data : '';
+                const parsedMessage = JSON.parse(messageData);
+
+                try {
+                    if (parsedMessage.type === 'sessionId') {
+                        setSessionId(parsedMessage.sessionId);
+                    }
+                } catch (e) {
+                    console.log('Error parsing message', e);
+                }
+            };
+        }
+    }, [ws]);
 
     const handleLogin = (id: string) => {
         setIsAuthenticated(true);
@@ -69,9 +62,9 @@ const App: React.FC = () => {
         <div>
             <h1>Main chat page</h1>
             {isAuthenticated ? (
-                <Chat ws={ws} onLogout={handleLogout} userId={userId} sessionId={sessionId} />
+                <Chat ws={ws} setWs={setWs} onLogout={handleLogout} userId={userId} sessionId={sessionId} />
             ) : (
-                <Auth ws={ws} onLogin={handleLogin}/>
+                <Auth ws={ws} onLogin={handleLogin} />
             )}
         </div>
     );

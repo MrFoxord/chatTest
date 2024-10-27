@@ -7,7 +7,7 @@ export interface IGroupChats extends Document {
 
 const groupChatSchema = new Schema<IGroupChats>({
   name: { type: String, required: true },
-  clients: [{ type: mongoose.Types.ObjectId, ref: 'clients' }], // Поменяйте на members, если хотите использовать это имя
+  clients: [{ type: mongoose.Types.ObjectId, ref: 'clients' }],
 });
 
 const GroupChats = mongoose.model<IGroupChats>('groupChats', groupChatSchema);

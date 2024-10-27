@@ -8,28 +8,28 @@ const Auth: React.FC<{ ws: WebSocket | null; onLogin: (clientId: string) => void
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false); // Для индикатора загрузки
-
+    const [loading, setLoading] = useState(false); 
+    // ws requesting of server for needed data to login and registry
     useEffect(() => {
         if (ws) {
             ws.onmessage = (event) => {
                 const message = JSON.parse(event.data);
                 if (message.type === 'login' && message.status === 'ok') {
-                    onLogin(message.clientId); // Вызов onLogin с clientId
-                    setLoading(false); // Сброс загрузки
+                    onLogin(message.clientId); 
+                    setLoading(false); 
                 } else if (message.type === 'register' && message.status === 'ok') {
-                    onLogin(message.clientId); // Вызов onLogin с clientId
-                    setLoading(false); // Сброс загрузки
+                    onLogin(message.clientId); 
+                    setLoading(false); 
                 } else if (message.status === 'error') {
                     setError(message.error);
-                    setLoading(false); // Сброс загрузки
+                    setLoading(false);
                 }
             };
         }
     }, [ws, onLogin]);
-
+// handlers
     const handleLogin = () => {
-        setLoading(true); // Установка состояния загрузки
+        setLoading(true);
         if (ws?.readyState === WebSocket.OPEN) {
             const message = JSON.stringify({
                 type: 'login',
@@ -44,7 +44,7 @@ const Auth: React.FC<{ ws: WebSocket | null; onLogin: (clientId: string) => void
     };
 
     const handleRegister = () => {
-        setLoading(true); // Установка состояния загрузки
+        setLoading(true); 
         if (ws?.readyState === WebSocket.OPEN) {
             const message = JSON.stringify({
                 type: 'register',

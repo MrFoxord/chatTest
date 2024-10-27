@@ -1,3 +1,5 @@
+//first-launch util
+
 db = db.getSiblingDB('chatDatabase');
 
 if (db.services.countDocuments() === 0) {
